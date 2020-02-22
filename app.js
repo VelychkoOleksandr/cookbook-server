@@ -1,41 +1,48 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express')
+const bodyParser = require('body-parser')
+const mongoose = require('mongoose')
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+//--------MONGODB ATLAS CLUSTER CONNECTION URL--------\\
+const mongoDBConnectionURL = require('./meta-data/db-access')
 
-var app = express();
+//--------ROUTES IMPORT--------\\
+const registerUser = require('./routes/register-user')
+const recipesList = require('./routes/recipes-list')
+const recipeByID = require('./routes/recipe-by-id')
+const recipeAdd = require('./routes/recipe-add')
+const recipeUpdate = require('./routes/recipe-update')
+const recipeOldVerions = require('./routes/recipe-old-versions')
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+//--------INITIALIZE APP--------\\
+const app = express()
+const PORT = 9999
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+//--------MIDDLEWARE--------\\
+app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.json())
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+//--------ROUTES HANDLE--------\\
+app.use('/register', registerUser)             // POST: '/register'
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.use('/cookbook', recipesList)              // GET: '/cookbook/:userID/recipes'
+app.use('/cookbook', recipeAdd)                // PUT: '/cookbook/:userID/recipes/add'
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+app.use('/cookbook/recipes', recipeByID)       // GET: '/cookbook/recipes/:recipeID'
+app.use('/cookbook/recipes', recipeUpdate)     // PUT: '/cookbook/recipes/:recipeID/update'
+app.use('/cookbook/recipes', recipeOldVerions) // GET: '/cookbook/recipes/:recipeID/versions'
 
-module.exports = app;
+start()
+
+async function start() {
+  try {
+    await mongoose.connect(mongoDBConnectionURL, { useNewUrlParser: true, useUnifiedTopology: true })
+
+    app.listen(PORT, () => {
+      console.log(`Server started on *:${PORT}`)
+    })
+  } catch (error) {
+    console.log(error)
+  }
+
+}
